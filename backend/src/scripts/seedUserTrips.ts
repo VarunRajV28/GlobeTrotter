@@ -19,7 +19,7 @@ async function seedUserTrips() {
           email: 'venkatesh.k21062005@gmail.com',
           name: 'Venkatesh',
           password: hashedPassword,
-          role: 'USER',
+          role: 'ADMIN',
           status: 'ACTIVE',
         },
       });
