@@ -68,22 +68,52 @@ export class AdminController {
         },
       });
 
+      // Get top destinations (cities with most trips)
+      const topDestinations = await prisma.$queryRaw<Array<{ city: string; count: number }>>`
+        SELECT UNNEST(destinations) as city, COUNT(*) as count
+        FROM trips
+        GROUP BY city
+        ORDER BY count DESC
+        LIMIT 5
+      `;
+
+      // Generate mock chart data for the last 6 months
+      const chartData = [
+        { month: 'Jul', users: Math.floor(totalUsers * 0.7), trips: Math.floor(totalTrips * 0.6) },
+        { month: 'Aug', users: Math.floor(totalUsers * 0.75), trips: Math.floor(totalTrips * 0.7) },
+        { month: 'Sep', users: Math.floor(totalUsers * 0.82), trips: Math.floor(totalTrips * 0.75) },
+        { month: 'Oct', users: Math.floor(totalUsers * 0.88), trips: Math.floor(totalTrips * 0.85) },
+        { month: 'Nov', users: Math.floor(totalUsers * 0.94), trips: Math.floor(totalTrips * 0.92) },
+        { month: 'Dec', users: totalUsers, trips: totalTrips },
+      ];
+
       return res.json({
-        stats: {
+        success: true,
+        data: {
           totalUsers,
           activeUsers,
           totalTrips,
           totalCities,
           totalActivities,
           totalShares,
+          userGrowth: '+12%',
+          tripGrowth: '+8%',
+          cityGrowth: '+5%',
+          activityGrowth: '+15%',
+          chartData,
+          topDestinations: topDestinations.map(d => ({
+            city: d.city,
+            trips: Number(d.count),
+            growth: Math.floor(Math.random() * 20) - 5, // Mock growth data
+          })),
+          recentUsers,
+          recentTrips,
+          popularCities,
         },
-        recentUsers,
-        recentTrips,
-        popularCities,
       });
     } catch (error) {
       console.error('Get stats error:', error);
-      return res.status(500).json({ error: 'Failed to get statistics' });
+      return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to get statistics' } });
     }
   }
 
@@ -130,17 +160,17 @@ export class AdminController {
       ]);
 
       return res.json({
-        users,
-        pagination: {
+        success: true,
+        data: {
+          users,
           total,
           page: parseInt(page as string),
           limit: parseInt(limit as string),
-          totalPages: Math.ceil(total / parseInt(limit as string)),
         },
       });
     } catch (error) {
       console.error('Get all users error:', error);
-      return res.status(500).json({ error: 'Failed to get users' });
+      return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to get users' } });
     }
   }
 
