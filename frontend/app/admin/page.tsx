@@ -36,22 +36,32 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
-        const currentUser = await getCurrentUser()
+        const response = await getCurrentUser()
+        console.log('🔍 Admin - getCurrentUser response:', response)
+        
+        // getCurrentUser returns User directly
+        const currentUser = response
+        console.log('👤 Admin - User:', currentUser, 'Role:', currentUser?.role)
+        
         if (!currentUser) {
+          console.log('❌ No user, redirecting to login')
           router.push("/login")
           return
         }
 
-        // Check if user is admin (you can add role check here)
+        // Check if user is admin
         if (currentUser.role !== 'ADMIN') {
+          console.log('❌ Not admin. Role:', currentUser.role)
           toast({
             title: "Access Denied",
-            description: "You don't have permission to access this page.",
+            description: `You don't have permission to access this page. Your role: ${currentUser.role}`,
             variant: "destructive",
           })
           router.push("/dashboard")
           return
         }
+
+        console.log('✅ User is admin, loading data...')
 
         const [statsData, usersData] = await Promise.all([
           adminApi.getStats().catch(() => null),
@@ -61,6 +71,7 @@ export default function AdminDashboardPage() {
         setStats(statsData)
         setUsers(usersData.users)
       } catch (error) {
+        console.error('❌ Error:', error)
         toast({
           title: "Error",
           description: "Failed to load admin data.",
