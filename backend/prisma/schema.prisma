@@ -7,16 +7,171 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+}
+
+enum TripStatus {
+  PLANNED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum ActivityCategory {
+  SIGHTSEEING
+  FOOD_DRINK
+  ADVENTURE
+  CULTURE
+  SHOPPING
+  NIGHTLIFE
+  RELAXATION
+  SPORTS
+  TRANSPORTATION
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
 model User {
   id          String       @id @default(cuid())
   email       String       @unique
   name        String?
+  password    String
+  avatar      String?
+  role        UserRole     @default(USER)
+  status      UserStatus   @default(ACTIVE)
+  lastLogin   DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  
+  // Relations
   itineraries Itinerary[]
+  trips       Trip[]
+  shareLinks  ShareLink[]
 
   @@map("users")
 }
+
+// ============================================
+// TRIP MANAGEMENT (NEW - FOR FRONTEND)
+// ============================================
+
+model Trip {
+  id              String         @id @default(cuid())
+  userId          String
+  name            String
+  description     String?
+  startDate       DateTime?
+  endDate         DateTime?
+  coverImageUrl   String?
+  isPublic        Boolean        @default(false)
+  status          TripStatus     @default(PLANNED)
+  budget          Float?
+  destinations    String[]       // Array of city names
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // Relations
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripActivities  TripActivity[]
+  shareLinks      ShareLink[]
+
+  @@map("trips")
+}
+
+model City {
+  id          String     @id @default(cuid())
+  name        String
+  country     String
+  description String?
+  imageUrl    String?
+  costIndex   Float?     // 0-100 scale
+  popularity  Int        @default(0)
+  amadeusCode String?    @unique // IATA code from Amadeus
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Relations
+  activities  Activity[]
+
+  @@map("cities")
+}
+
+model Activity {
+  id                String           @id @default(cuid())
+  cityId            String
+  name              String
+  description       String?
+  category          ActivityCategory
+  estimatedCost     Float?
+  duration          Int?             // Duration in minutes
+  imageUrl          String?
+  amadeusActivityId String?          @unique
+  rating            Float?
+  bookingLink       String?
+  latitude          Float?
+  longitude         Float?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+  // Relations
+  city              City             @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  tripActivities    TripActivity[]
+
+  @@map("activities")
+}
+
+model TripActivity {
+  id         String   @id @default(cuid())
+  tripId     String
+  activityId String
+  date       DateTime?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  trip       Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, activityId])
+  @@map("trip_activities")
+}
+
+model ShareLink {
+  id        String   @id @default(cuid())
+  shareId   String   @unique // URL-safe random string
+  tripId    String
+  userId    String
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("share_links")
+}
+
+// ============================================
+// LEGACY ITINERARY SYSTEM (KEEP FOR NOW)
+// ============================================
 
 model Itinerary {
   id            String           @id @default(cuid())
@@ -27,7 +182,7 @@ model Itinerary {
   currency      String           @default("USD")
   startDate     DateTime?
   endDate       DateTime?
-  status        String           @default("planning") // planning, confirmed, completed
+  status        String           @default("planning")
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   
@@ -42,12 +197,12 @@ model Itinerary {
 model ItineraryStop {
   id             String              @id @default(cuid())
   itineraryId    String
-  cityCode       String              // IATA city code (e.g., PAR, NYC)
+  cityCode       String
   cityName       String
   countryCode    String?
   latitude       Float?
   longitude      Float?
-  sequence       Int                 // Order in the itinerary (1, 2, 3...)
+  sequence       Int
   checkInDate    DateTime?
   checkOutDate   DateTime?
   nights         Int?
@@ -66,7 +221,7 @@ model ItineraryStop {
 model ItineraryActivity {
   id                String        @id @default(cuid())
   stopId            String
-  amadeusActivityId String        // Amadeus activity ID
+  amadeusActivityId String
   name              String
   shortDescription  String?
   description       String?
@@ -74,8 +229,8 @@ model ItineraryActivity {
   price             Float?
   currency          String?
   bookingLink       String?
-  minimumDuration   String?       // ISO 8601 duration (e.g., PT2H)
-  pictures          String[]      // Array of image URLs
+  minimumDuration   String?
+  pictures          String[]
   latitude          Float?
   longitude         Float?
   isBooked          Boolean       @default(false)
@@ -91,10 +246,10 @@ model ItineraryActivity {
 model ItineraryHotel {
   id             String        @id @default(cuid())
   stopId         String
-  amadeusHotelId String        // Amadeus 8-char hotel property code
+  amadeusHotelId String
   hotelName      String
   chainCode      String?
-  offerId        String?       // Specific offer ID from Amadeus
+  offerId        String?
   roomType       String?
   checkInDate    DateTime
   checkOutDate   DateTime
@@ -102,8 +257,8 @@ model ItineraryHotel {
   priceBase      Float?
   priceTotal     Float
   currency       String
-  paymentType    String?       // deposit, guarantee, etc.
-  cancellation   String?       // Cancellation policy type
+  paymentType    String?
+  cancellation   String?
   latitude       Float?
   longitude      Float?
   isBooked       Boolean       @default(false)
@@ -119,19 +274,19 @@ model ItineraryHotel {
 model FlightSegment {
   id              String    @id @default(cuid())
   itineraryId     String
-  flightOfferId   String?   // ID from Amadeus Flight Offers
-  fromCityCode    String    // Departure IATA code
-  toCityCode      String    // Arrival IATA code
+  flightOfferId   String?
+  fromCityCode    String
+  toCityCode      String
   departureDate   DateTime?
   arrivalDate     DateTime?
-  carrierCode     String?   // Airline code (e.g., AF, BA)
+  carrierCode     String?
   flightNumber    String?
-  duration        String?   // ISO 8601 duration
+  duration        String?
   passengers      Int       @default(1)
   priceBase       Float?
   priceTotal      Float
   currency        String
-  cabinClass      String?   // ECONOMY, BUSINESS, etc.
+  cabinClass      String?
   isBooked        Boolean   @default(false)
   bookingRef      String?
   createdAt       DateTime  @default(now())

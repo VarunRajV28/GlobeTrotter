@@ -1,8 +1,8 @@
 {
   "name": "globetrotter-backend",
   "version": "1.0.0",
-  "description": "GlobeTrotter Travel Planning Backend API with Amadeus Integration",
-  "main": "dist/server.js",
+  "description": "GlobeTrotter Travel Planning Backend API",
+  "main": "src/server.ts",
   "scripts": {
     "dev": "nodemon src/server.ts",
     "build": "tsc",
@@ -10,14 +10,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "seed": "ts-node src/scripts/seedCitiesAndActivities.ts"
+    "seed": "ts-node src/scripts/seedCitiesAndActivities.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "travel",
-    "amadeus",
-    "itinerary",
-    "planning"
-  ],
+  "keywords": ["travel", "api", "amadeus", "itinerary"],
   "author": "",
   "license": "ISC",
   "dependencies": {
