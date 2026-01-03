@@ -109,7 +109,8 @@ export const authApi = {
   },
 
   getProfile: async () => {
-    return await apiRequest<any>('/auth/me')
+    const response = await apiRequest<{ user: any }>('/auth/me')
+    return response.user
   },
 }
 

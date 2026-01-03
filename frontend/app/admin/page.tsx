@@ -36,11 +36,8 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
-        const response = await getCurrentUser()
-        console.log('🔍 Admin - getCurrentUser response:', response)
-        
-        // getCurrentUser returns User directly
-        const currentUser = response
+        const currentUser = await getCurrentUser()
+        console.log('🔍 Admin - getCurrentUser response:', currentUser)
         console.log('👤 Admin - User:', currentUser, 'Role:', currentUser?.role)
         
         if (!currentUser) {
